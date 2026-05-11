@@ -2,8 +2,12 @@ name: Garmin to Notion Sync
 
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: "0 6 * * *"
   workflow_dispatch:
+
+concurrency:
+  group: garmin-to-notion
+  cancel-in-progress: true
 
 jobs:
   sync:
@@ -14,24 +18,21 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: $ runner.os -pip-$ hashFiles('**/requirements.txt') 
           restore-keys: |
-            ${{ runner.os }}-pip-
+            $ runner.os -pip-
 
       - name: Restore Garmin tokens
         uses: actions/cache@v4
-        id: garmin-tokens
         with:
           path: ~/.garmin_tokens
-          key: garmin-tokens-${{ github.run_id }}
-          restore-keys: |
-            garmin-tokens-
+          key: garmin-tokens-v1-$ runner.os 
 
       - name: Install dependencies
         run: |
@@ -40,13 +41,13 @@ jobs:
 
       - name: Run sync
         env:
-          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-          GARMIN_TOKENS: ${{ secrets.GARMIN_TOKENS }}
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          GARMIN_EMAIL: $ secrets.GARMIN_EMAIL 
+          GARMIN_PASSWORD: $ secrets.GARMIN_PASSWORD 
+          GARMIN_TOKENS: $ secrets.GARMIN_TOKENS 
+          NOTION_TOKEN: $ secrets.NOTION_TOKEN 
           GARMIN_TOKENSTORE: ~/.garmin_tokens
-          TIMEZONE: ${{ vars.TIMEZONE || 'UTC' }}
-          GARMIN_DAYS_BACK: ${{ vars.GARMIN_DAYS_BACK || '30' }}
-          GARMIN_ACTIVITIES_FETCH_LIMIT: ${{ vars.GARMIN_ACTIVITIES_FETCH_LIMIT || '1000' }}
+          TIMEZONE: $ vars.TIMEZONE || 'UTC' 
+          GARMIN_DAYS_BACK: $ vars.GARMIN_DAYS_BACK || '30' 
+          GARMIN_ACTIVITIES_FETCH_LIMIT: $ vars.GARMIN_ACTIVITIES_FETCH_LIMIT || '1000' 
           PYTHONPATH: src
         run: python -m garmin_to_notion all

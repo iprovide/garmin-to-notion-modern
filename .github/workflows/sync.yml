@@ -11,10 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
@@ -22,20 +24,28 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Restore Garmin tokens
-        uses: actions/cache@v4
-        with:
-          path: ~/.garmin_tokens
-          key: garmin-tokens-v1-${{ runner.os }}
+
+      - name: Restore Garmin tokens from secret
+        run: |
+          mkdir -p ~/.garmin_tokens
+          if [ -n "$GARMIN_TOKENS" ]; then
+            echo "$GARMIN_TOKENS" | base64 -d > ~/.garmin_tokens/oauth2_token.json
+            echo "Restored Garmin tokens from secret."
+          else
+            echo "No GARMIN_TOKENS secret found, will attempt fresh login."
+          fi
+        env:
+          GARMIN_TOKENS: ${{ secrets.GARMIN_TOKENS }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
       - name: Run sync
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-          GARMIN_TOKENS: ${{ secrets.GARMIN_TOKENS }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           GARMIN_TOKENSTORE: ~/.garmin_tokens
           TIMEZONE: ${{ vars.TIMEZONE }}
@@ -43,3 +53,17 @@ jobs:
           GARMIN_ACTIVITIES_FETCH_LIMIT: ${{ vars.GARMIN_ACTIVITIES_FETCH_LIMIT }}
           PYTHONPATH: src
         run: python -m garmin_to_notion all
+
+      - name: Save updated Garmin tokens back to secret
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN_FILE=~/.garmin_tokens/oauth2_token.json
+          if [ -f "$TOKEN_FILE" ]; then
+            ENCODED=$(base64 -w 0 "$TOKEN_FILE")
+            gh secret set GARMIN_TOKENS --body "$ENCODED"
+            echo "Tokens saved successfully."
+          else
+            echo "No token file found to save."
+          fi

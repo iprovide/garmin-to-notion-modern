@@ -1,7 +1,7 @@
 name: Garmin to Notion Sync
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "2 20 * * *"
   workflow_dispatch:
 concurrency:
   group: garmin-to-notion
@@ -59,11 +59,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          TOKEN_FILE=~/.garmin_tokens/oauth2_token.json
-          if [ -f "$TOKEN_FILE" ]; then
-            ENCODED=$(base64 -w 0 "$TOKEN_FILE")
-            gh secret set GARMIN_TOKENS --body "$ENCODED"
+          if [ -f ~/.garmin_tokens/oauth1_token.json ] && [ -f ~/.garmin_tokens/oauth2_token.json ]; then
+            python3 scripts/save_tokens.py | gh secret set GARMIN_TOKENS
             echo "Tokens saved successfully."
           else
-            echo "No token file found to save."
+            echo "No token files found to save."
           fi

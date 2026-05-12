@@ -29,15 +29,8 @@ jobs:
         run: |
           mkdir -p ~/.garmin_tokens
           if [ -n "$GARMIN_TOKENS" ]; then
-            echo "$GARMIN_TOKENS" | base64 -d | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-with open('/home/runner/.garmin_tokens/oauth1_token.json', 'w') as f:
-    json.dump(data['oauth1'], f)
-with open('/home/runner/.garmin_tokens/oauth2_token.json', 'w') as f:
-    json.dump(data['oauth2'], f)
-print('Restored both oauth1 and oauth2 token files.')
-"
+            echo "$GARMIN_TOKENS" | base64 -d > /tmp/garmin_bundle.json
+            python3 scripts/restore_tokens.py
           else
             echo "No GARMIN_TOKENS secret found, will attempt fresh login."
           fi
